@@ -1,0 +1,42 @@
+name: django-drf-redis
+
+services:
+  postgres:
+    image: postgres:17.4-alpine3.21
+    container_name: invetory_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7.4.3-alpine
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+  redisinsight:
+    image: redis/redisinsight:2.68
+    container_name: redis_insight
+    restart: always
+    depends_on:
+      - redis
+    ports:
+      - "5540:5540"
+
+  django:
+    build: .
+    container_name: django_app
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./app:/app
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8080"

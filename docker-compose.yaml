@@ -9,6 +9,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: inventory
+    volumes:
+      # Use my local init.sql file, and inside the container place it
+      # where the database looks for initialization scripts
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db-data:/data
     ports:
       - "5432:5432"
 
@@ -37,6 +42,17 @@ services:
     volumes:
       - ./app:/app
     ports:
-      - "8080:8080"
+      - "8000:8000"
     command: >
-      sh -c "python manage.py runserver 0.0.0.0:8080"
+      sh -c "
+          if python manage.py shell -c 'from django.contrib.auth.models import User; print(User.objects.filter(username=\"admin\").exists())' | grep -q 'True'; then
+            echo 'Admin user exists, skipping app and database setup';
+          else
+            rm -f inventory/migrations/0001_initial.py &&
+            python manage.py migrate &&
+            python manage.py makemigrations &&
+            python manage.py migrate inventory --fake &&
+            python manage.py shell -c 'from django.contrib.auth.models import User; User.objects.create_superuser(\"admin\", \"admin@example.com\", \"admin\");' ;
+          fi &&
+          python manage.py runserver 0.0.0.0:8000
+        "

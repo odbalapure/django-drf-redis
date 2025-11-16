@@ -34,3 +34,15 @@ DATABASES = {
 Now run the migrations inside docker, but use `psycopg[binary]`
 
 > python manage.py migrate
+
+## Setting up database init
+
+Copy the init.sql to docker entry for postgres
+
+```sh
+/usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+CREATE TABLE
+CREATE TABLE
+COPY 34
+COPY 30
+```

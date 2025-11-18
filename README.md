@@ -46,3 +46,56 @@ CREATE TABLE
 COPY 34
 COPY 30
 ```
+
+## Creating first REST endpoint
+
+Add "rest_framework" to the INSTALLED_APP array.
+
+Then create a serializer
+
+```python
+from rest_framework import serialzers
+from .models import Product
+
+
+class ProductSerializer(serialzers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ["id", "name", "price"]
+```
+
+Add the following in the views.py file
+
+```python
+from django.shortcuts import render
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Product
+from .serializer import ProductSerializer
+
+
+# Create your views here.
+class ProductListAPIView(APIView):
+    def get(self, _):
+        products = Product.objects.all()
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data)
+```
+
+Create a urls file
+
+```python
+from django.urls import path
+from .views import ProductListAPIView
+
+urlpatterns = [path("products/", ProductListAPIView.as_view(), name="product-list")]
+```
+
+Finally in the core urls.py, add the path for inventory
+
+```python
+from django.contrib import admin
+from django.urls import include, path
+
+urlpatterns = [path("admin/", admin.site.urls), path("api/", include("inventory.urls"))]
+```

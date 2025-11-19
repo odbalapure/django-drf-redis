@@ -99,3 +99,34 @@ from django.urls import include, path
 
 urlpatterns = [path("admin/", admin.site.urls), path("api/", include("inventory.urls"))]
 ```
+
+## Creating endpoint for docs
+
+Add `drf_spectacular` to INSTALLED_APPS list. And add the following in the settings.py file as well
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Session based cart",
+    "DESCRIPTION": "Redis fast storage for web apps",
+    "VERSION": "1.0.0",
+}
+```
+
+And update the core/urls.py as well
+
+```python
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/", include("inventory.urls")),
+]
+```

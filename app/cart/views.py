@@ -1,9 +1,29 @@
 from rest_framework.views import APIView
-from .serializer import AddToCartSerializer
-from .redis_cart import add_to_cart
+from .serializer import (
+    AddToCartSerializer,
+    CartItemSerializer,
+    RemoveFromCartSerializer,
+)
+from .redis_cart import add_to_cart, get_cart, remove_from_cart, clear_cart
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
+
+
+# Get, clear cart
+class CartView(APIView):
+    @extend_schema(
+        responses={200: CartItemSerializer(many=True)}, description="Get cart products"
+    )
+    def get(self, request):
+        session_id = request.session.session_key
+        cart_data = get_cart(session_id)
+        return Response(cart_data)
+
+    def delete(self, request):
+        session_id = request.session.session_key
+        clear_cart(session_id)
+        return Response({"message": "Cart cleared"}, status=status.HTTP_204_NO_CONTENT)
 
 
 # Create your views here.
@@ -36,3 +56,21 @@ class AddToCartView(APIView):
         )
 
         return Response({"message": "Added to cart."}, status=status.HTTP_200_OK)
+
+
+# Remove from cart
+class RemoveFromCartView(APIView):
+    @extend_schema(
+        request=RemoveFromCartSerializer,
+        responses={204: None},
+        description="Remove product from current cart session",
+    )
+    def post(self, request):
+        session_id = request.session.session_key
+        serializer = RemoveFromCartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        product_id = serializer.validated_data["product_id"]
+        remove_from_cart(session_id, product_id)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

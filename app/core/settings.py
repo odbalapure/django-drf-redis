@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import redis
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -86,6 +87,17 @@ DATABASES = {
     }
 }
 
+REDIS_HOST = "redis"
+REDIS_PORT = 6379
+REDIS_DB = 0
+REDIS_DECODE_RESPONSES = True
+
+REDIS_CLIENT = redis.Redis(
+    host=REDIS_HOST,
+    port=REDIS_PORT,
+    db=REDIS_DB,
+    decode_responses=REDIS_DECODE_RESPONSES,
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

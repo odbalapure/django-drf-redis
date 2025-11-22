@@ -130,3 +130,9 @@ urlpatterns = [
     path("api/", include("inventory.urls")),
 ]
 ```
+
+## Cart logic
+
+Generate boilerplate cart code
+
+> python manage.py startapp cart

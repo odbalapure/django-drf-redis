@@ -17,3 +17,8 @@ class AddToCartSerializer(serializers.Serializer):
 
 class RemoveFromCartSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
+
+
+class UpdateQuantitySerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    action = serializers.ChoiceField(choices=["inc", "dec"], default="inc")

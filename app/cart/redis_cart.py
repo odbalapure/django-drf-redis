@@ -36,3 +36,31 @@ def add_to_cart(session_id, product_id, quantity, name, price):
     }
 
     r.hset(cart_key, product_id, json.dumps(product_data))
+
+
+def increment_quantity(session_id, product_id, step=1):
+    key = _cart_key(session_id)
+    existing = r.hget(key, product_id)
+
+    if not existing:
+        return False
+
+    data = json.loads(existing)
+    data["quantity"] += step
+    r.hset(key, product_id, json.dumps(data))
+
+    return True
+
+
+def decrement_quantity(session_id, product_id, step=1):
+    key = _cart_key(session_id)
+    existing = r.hget(key, product_id)
+
+    if not existing:
+        return False
+
+    data = json.loads(existing)
+    data["quantity"] -= max(data["quantity"] - step, 1)
+    r.hset(key, product_id, json.dumps(data))
+
+    return True

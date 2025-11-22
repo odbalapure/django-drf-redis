@@ -3,8 +3,16 @@ from .serializer import (
     AddToCartSerializer,
     CartItemSerializer,
     RemoveFromCartSerializer,
+    UpdateQuantitySerializer,
 )
-from .redis_cart import add_to_cart, get_cart, remove_from_cart, clear_cart
+from .redis_cart import (
+    add_to_cart,
+    get_cart,
+    remove_from_cart,
+    clear_cart,
+    increment_quantity,
+    decrement_quantity,
+)
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
@@ -72,5 +80,24 @@ class RemoveFromCartView(APIView):
 
         product_id = serializer.validated_data["product_id"]
         remove_from_cart(session_id, product_id)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UpdateQuantityView(APIView):
+    @extend_schema(
+        request=UpdateQuantitySerializer,
+        responses={200: None},
+        description="Update product quantity",
+    )
+    def post(self, request):
+        session_id = request.session.session_key
+        product_id = request.data.get("product_id")
+        action = request.data.get("action", "inc")
+
+        if action == "inc":
+            increment_quantity(session_id, product_id)
+        else:
+            decrement_quantity(session_id, product_id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -64,3 +64,27 @@ def decrement_quantity(session_id, product_id, step=1):
     r.hset(key, product_id, json.dumps(data))
 
     return True
+
+
+def set_quantity(session_id, product_id, quantity):
+    key = _cart_key(session_id)
+    existing = r.hget(key, product_id)
+
+    if not existing:
+        return False
+
+    data = json.loads(existing)
+    data["quantity"] = quantity
+    r.hset(key, product_id, json.dumps(data))
+
+    return True
+
+
+def set_cart_promo_code(session_id, promo_code):
+    key = f"cart:{session_id}:promo_code"
+    r.set(key, promo_code)
+
+
+def get_cart_promo_code(session_id):
+    key = f"cart:{session_id}:promo_code"
+    r.get(key)

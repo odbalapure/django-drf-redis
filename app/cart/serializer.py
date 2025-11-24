@@ -22,3 +22,12 @@ class RemoveFromCartSerializer(serializers.Serializer):
 class UpdateQuantitySerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     action = serializers.ChoiceField(choices=["inc", "dec"], default="inc")
+
+
+class SetQuantitySerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class CartPromoSerializer(serializers.Serializer):
+    promo_code = serializers.CharField()

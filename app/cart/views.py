@@ -4,6 +4,8 @@ from .serializer import (
     CartItemSerializer,
     RemoveFromCartSerializer,
     UpdateQuantitySerializer,
+    SetQuantitySerializer,
+    CartPromoSerializer,
 )
 from .redis_cart import (
     add_to_cart,
@@ -12,6 +14,9 @@ from .redis_cart import (
     clear_cart,
     increment_quantity,
     decrement_quantity,
+    set_quantity,
+    set_cart_promo_code,
+    get_cart_promo_code,
 )
 from rest_framework.response import Response
 from rest_framework import status
@@ -26,7 +31,11 @@ class CartView(APIView):
     def get(self, request):
         session_id = request.session.session_key
         cart_data = get_cart(session_id)
-        return Response(cart_data)
+        promo_code = get_cart_promo_code(session_id)
+
+        return Response(
+            {"items": cart_data, "promo_code": promo_code}, status=status.HTTP_200_OK
+        )
 
     def delete(self, request):
         session_id = request.session.session_key
@@ -101,3 +110,47 @@ class UpdateQuantityView(APIView):
             decrement_quantity(session_id, product_id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Set cart quantity
+class SetQuantityView(APIView):
+    @extend_schema(
+        request=SetQuantitySerializer,
+        responses={200: None},
+        description="Set product quantity",
+    )
+    def post(self, request):
+        session_id = request.session.session_key
+
+        serializer = SetQuantitySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        product_id = serializer.validated_data["product_id"]
+        quantity = serializer.validated_data["quantity"]
+
+        updated = set_quantity(session_id, product_id, quantity)
+        if not updated:
+            return Response({"error": "Product not found in cart."}, status=404)
+
+        return Response(
+            {"message": f"Product quantity updated to {quantity}."}, status=200
+        )
+
+
+# Set promo code for cart
+class CartPromoView(APIView):
+    @extend_schema(
+        request=CartPromoSerializer,
+        responses={200: None},
+        description="Set product quantity",
+    )
+    def post(self, request):
+        session_id = request.session.session_key
+
+        serializer = CartPromoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        promo_code = serializer.validated_data["promo_code"]
+        set_cart_promo_code(session_id, promo_code)
+
+        return Response({"message": "Promo code applied"}, status=200)

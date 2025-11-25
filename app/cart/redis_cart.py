@@ -4,6 +4,16 @@ import json
 
 r = settings.REDIS_CLIENT
 
+CART_TTL = 60 * 30  # 30 minutes
+
+
+def _refresh_cart_ttl(session_id):
+    cart_key = _cart_key(session_id)
+    promo_key = f"{cart_key}:promo_code"
+
+    r.expire(cart_key, CART_TTL)
+    r.expire(promo_key, CART_TTL)
+
 
 def _cart_key(session_id):
     return f"cart:{session_id}"
@@ -28,6 +38,8 @@ def remove_from_cart(session_id, product_id):
         promo_key = f"cart:{session_id}:promo_code"
         r.delete(promo_key)
 
+    _refresh_cart_ttl(session_id)
+
 
 def clear_cart(session_id):
     key = _cart_key(session_id)
@@ -45,6 +57,7 @@ def add_to_cart(session_id, product_id, quantity, name, price):
     }
 
     r.hset(cart_key, product_id, json.dumps(product_data))
+    _refresh_cart_ttl(session_id)
 
 
 def increment_quantity(session_id, product_id, step=1):
@@ -57,6 +70,8 @@ def increment_quantity(session_id, product_id, step=1):
     data = json.loads(existing)
     data["quantity"] += step
     r.hset(key, product_id, json.dumps(data))
+
+    _refresh_cart_ttl(session_id)
 
     return True
 
@@ -72,6 +87,8 @@ def decrement_quantity(session_id, product_id, step=1):
     data["quantity"] -= max(data["quantity"] - step, 1)
     r.hset(key, product_id, json.dumps(data))
 
+    _refresh_cart_ttl(session_id)
+
     return True
 
 
@@ -86,12 +103,15 @@ def set_quantity(session_id, product_id, quantity):
     data["quantity"] = quantity
     r.hset(key, product_id, json.dumps(data))
 
+    _refresh_cart_ttl(session_id)
+
     return True
 
 
 def set_cart_promo_code(session_id, promo_code):
     key = f"cart:{session_id}:promo_code"
     r.set(key, promo_code)
+    _refresh_cart_ttl(session_id)
 
 
 def get_cart_promo_code(session_id):
@@ -110,3 +130,4 @@ def update_cart_item(session_id, product_id, name, price, quantity):
     }
 
     r.hset(key, product_id, json.dumps(product_data))
+    _refresh_cart_ttl(session_id)

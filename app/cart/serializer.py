@@ -1,3 +1,4 @@
+from re import search
 from rest_framework import serializers
 
 
@@ -31,3 +32,12 @@ class SetQuantitySerializer(serializers.Serializer):
 
 class CartPromoSerializer(serializers.Serializer):
     promo_code = serializers.CharField()
+
+
+class CheckoutResponseItemSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    name = serializers.CharField()
+    price = serializers.FloatField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    valid = serializers.BooleanField()
+    error = serializers.CharField(allow_blank=True)

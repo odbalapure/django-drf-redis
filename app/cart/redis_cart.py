@@ -14,10 +14,19 @@ def get_cart(session_id):
     raw_cart = r.hgetall(key)
     return [json.loads(item) for item in raw_cart.values()]
 
+    # def ensure_str(v):
+    #     return v if isinstance(v, str) else v.decode("utf-8")
+
+    # return [json.loads(ensure_str(item)) for item in raw_cart.values()]
+
 
 def remove_from_cart(session_id, product_id):
     key = _cart_key(session_id)
     r.hdel(key, product_id)
+
+    if r.hlen(key) == 0:
+        promo_key = f"cart:{session_id}:promo_code"
+        r.delete(promo_key)
 
 
 def clear_cart(session_id):
@@ -87,4 +96,17 @@ def set_cart_promo_code(session_id, promo_code):
 
 def get_cart_promo_code(session_id):
     key = f"cart:{session_id}:promo_code"
-    r.get(key)
+    return r.get(key)
+
+
+def update_cart_item(session_id, product_id, name, price, quantity):
+    key = _cart_key(session_id)
+
+    product_data = {
+        "product_id": product_id,
+        "name": name,
+        "quantity": quantity,
+        "price": float(price),
+    }
+
+    r.hset(key, product_id, json.dumps(product_data))

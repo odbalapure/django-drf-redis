@@ -6,6 +6,7 @@ from .serializer import (
     UpdateQuantitySerializer,
     SetQuantitySerializer,
     CartPromoSerializer,
+    CheckoutResponseItemSerializer,
 )
 from .redis_cart import (
     add_to_cart,
@@ -17,10 +18,12 @@ from .redis_cart import (
     set_quantity,
     set_cart_promo_code,
     get_cart_promo_code,
+    update_cart_item,
 )
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema
+from inventory.models import Product
 
 
 # Get, clear cart
@@ -154,3 +157,51 @@ class CartPromoView(APIView):
         set_cart_promo_code(session_id, promo_code)
 
         return Response({"message": "Promo code applied"}, status=200)
+
+
+class CheckoutPromoView(APIView):
+    @extend_schema(
+        responses={200: CheckoutResponseItemSerializer(many=True)},
+        description="Valid and sanitize cart before checkout. Remove missing products, update price/name if needed.",
+    )
+    def post(self, request):
+        session_id = request.session.session_key
+        cart_items = get_cart(session_id)
+
+        if not cart_items:
+            return Response([], status=status.HTTP_200_OK)
+
+        product_ids = [item["product_id"] for item in cart_items]
+        products = Product.objects.filter(id__in=product_ids, is_active=True)
+
+        product_map = {product.id: product for product in products}
+
+        cleaned_cart = []
+
+        for item in cart_items:
+            product_id = item["product_id"]
+            product = product_map.get(product_id)
+
+            if not product:
+                remove_from_cart(session_id, product_id)
+                continue
+
+            # Check if Redis-stored name/price differs
+            if item["name"] != product.name or float(item["price"]) != float(
+                product.price
+            ):
+                update_cart_item(
+                    session_id,
+                    product_id,
+                    product.name,
+                    product.price,
+                    item["quantity"],
+                )
+                item["name"] = product.name
+                item["price"] = float(product.price)
+
+            item["valid"] = True
+            item["error"] = ""
+            cleaned_cart.append(item)
+
+        return Response(cleaned_cart, status=status.HTTP_200_OK)

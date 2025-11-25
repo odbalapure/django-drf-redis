@@ -7,6 +7,7 @@ from .views import (
     UpdateQuantityView,
     SetQuantityView,
     CartPromoView,
+    CheckoutPromoView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     path("update/", UpdateQuantityView.as_view()),
     path("update/quantity", SetQuantityView.as_view()),
     path("promo/", CartPromoView.as_view()),
+    path("checkout/", CheckoutPromoView.as_view()),
 ]

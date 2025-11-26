@@ -14,8 +14,8 @@ urlpatterns = [
     path("add/", AddToCartView.as_view()),
     path("get/", CartView.as_view()),
     path("delete/", RemoveFromCartView.as_view()),
-    path("update/", UpdateQuantityView.as_view()),
-    path("update/quantity", SetQuantityView.as_view()),
+    path("update/quantity", SetQuantityView.as_view()),  # More specific first
+    path("update/", UpdateQuantityView.as_view()),  # Less specific after
     path("promo/", CartPromoView.as_view()),
     path("checkout/", CheckoutPromoView.as_view()),
 ]

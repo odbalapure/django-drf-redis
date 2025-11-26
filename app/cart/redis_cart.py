@@ -8,84 +8,87 @@ CART_TTL = 60 * 30  # 30 minutes
 
 
 def _refresh_cart_ttl(session_id):
-    cart_key = _cart_key(session_id)
-    promo_key = f"{cart_key}:promo_code"
-
-    r.expire(cart_key, CART_TTL)
-    r.expire(promo_key, CART_TTL)
+    r.expire(_qty_key(session_id), CART_TTL)
+    r.expire(_details_key(session_id), CART_TTL)
+    r.expire(f"{_cart_key(session_id)}:promo_code", CART_TTL)
 
 
 def _cart_key(session_id):
     return f"cart:{session_id}"
 
 
+def _qty_key(session_id):
+    return f"{_cart_key(session_id)}:qty"
+
+
+def _details_key(session_id):
+    return f"{_cart_key(session_id)}:details"
+
+
 def get_cart(session_id):
-    key = _cart_key(session_id)
-    raw_cart = r.hgetall(key)
-    return [json.loads(item) for item in raw_cart.values()]
+    qtys = r.hgetall(_qty_key(session_id))
+    details = r.hgetall(_details_key(session_id))
 
-    # def ensure_str(v):
-    #     return v if isinstance(v, str) else v.decode("utf-8")
+    cart_items = []
+    for pid, qty in qtys.items():
+        detail_json = details.get(pid)
+        if not detail_json:
+            continue
 
-    # return [json.loads(ensure_str(item)) for item in raw_cart.values()]
+        data = json.loads(detail_json)
+        data["quantity"] = int(qty)
+        cart_items.append(data)
+
+    return cart_items
 
 
 def remove_from_cart(session_id, product_id):
-    key = _cart_key(session_id)
-    r.hdel(key, product_id)
+    r.hdel(_qty_key(session_id), product_id)
+    r.hdel(_details_key(session_id), product_id)
 
-    if r.hlen(key) == 0:
-        promo_key = f"cart:{session_id}:promo_code"
-        r.delete(promo_key)
+    if r.hlen(_qty_key(session_id)) == 0:
+        r.delete(f"{_cart_key(session_id)}:promo_code")
 
     _refresh_cart_ttl(session_id)
 
 
 def clear_cart(session_id):
-    key = _cart_key(session_id)
-    r.delete(key)
+    r.delete(_qty_key(session_id))
+    r.delete(_details_key(session_id))
+    r.delete(f"{_cart_key(session_id)}:promo_code")
 
 
 def add_to_cart(session_id, product_id, quantity, name, price):
-    cart_key = _cart_key(session_id)
+    qt_key = _qty_key(session_id)
+    details_key = _details_key(session_id)
 
-    product_data = {
-        "product_id": product_id,
-        "name": name,
-        "price": price,
-        "quantity": quantity,
-    }
+    r.hincrby(qt_key, product_id, quantity)
 
-    r.hset(cart_key, product_id, json.dumps(product_data))
+    if not r.hexists(details_key, product_id):
+        product_data = {
+            "product_id": product_id,
+            "name": name,
+            "price": price,
+        }
+
+        r.hset(details_key, product_id, json.dumps(product_data))
+
     _refresh_cart_ttl(session_id)
 
 
 def increment_quantity(session_id, product_id, step=1):
-    key = _cart_key(session_id)
-    existing = r.hget(key, product_id)
-
-    if not existing:
-        return False
-
-    data = json.loads(existing)
-    data["quantity"] += step
-    r.hset(key, product_id, json.dumps(data))
-
+    r.hincrby(_qty_key(session_id), product_id, step)
     _refresh_cart_ttl(session_id)
-
     return True
 
 
 def decrement_quantity(session_id, product_id, step=1):
-    key = _cart_key(session_id)
-    existing = r.hget(key, product_id)
+    qt_key = _qty_key(session_id)
+    new_qty = r.hincrby(qt_key, product_id, -step)
 
-    if not existing:
-        return False
-
-    data = json.loads(existing)
-    data["quantity"] -= max(data["quantity"] - step, 1)
-    r.hset(key, product_id, json.dumps(data))
+    if new_qty < 1:
+        r.hdel(qt_key, product_id)
+        r.hdel(_details_key(session_id), product_id)
 
     _refresh_cart_ttl(session_id)
 
@@ -93,16 +96,7 @@ def decrement_quantity(session_id, product_id, step=1):
 
 
 def set_quantity(session_id, product_id, quantity):
-    key = _cart_key(session_id)
-    existing = r.hget(key, product_id)
-
-    if not existing:
-        return False
-
-    data = json.loads(existing)
-    data["quantity"] = quantity
-    r.hset(key, product_id, json.dumps(data))
-
+    r.hset(_qty_key(session_id), product_id, quantity)
     _refresh_cart_ttl(session_id)
 
     return True
@@ -120,14 +114,12 @@ def get_cart_promo_code(session_id):
 
 
 def update_cart_item(session_id, product_id, name, price, quantity):
-    key = _cart_key(session_id)
-
-    product_data = {
+    details = {
         "product_id": product_id,
         "name": name,
-        "quantity": quantity,
         "price": float(price),
     }
 
-    r.hset(key, product_id, json.dumps(product_data))
+    r.hset(_details_key(session_id), product_id, json.dumps(details))
+    r.hset(_qty_key(session_id), product_id, quantity)
     _refresh_cart_ttl(session_id)

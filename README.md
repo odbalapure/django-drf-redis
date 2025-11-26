@@ -136,3 +136,19 @@ urlpatterns = [
 Generate boilerplate cart code
 
 > python manage.py startapp cart
+
+## Segregate quantity and details
+
+Makes quantity updates faster, atomic and easier to manage.
+
+```css
+Redis Key: cart:abc123:qty
+    ├─ Field: product_1  → Value: 3
+    ├─ Field: product_2  → Value: 1
+    └─ Field: product_3  → Value: 5
+
+Redis Key: cart:abc123:details
+    ├─ Field: product_1  → Value: {"name": "Widget", "price": 10.99}
+    ├─ Field: product_2  → Value: {"name": "Gadget", "price": 5.99}
+    └─ Field: product_3  → Value: {"name": "Thing", "price": 15.99}
+```

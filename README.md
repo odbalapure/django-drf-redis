@@ -152,3 +152,12 @@ Redis Key: cart:abc123:details
     ├─ Field: product_2  → Value: {"name": "Gadget", "price": 5.99}
     └─ Field: product_3  → Value: {"name": "Thing", "price": 15.99}
 ```
+
+## Pipeline
+
+- Batch multiple redis commands into one request.
+- Reduces round trip b/w app and redis server.
+- Useful for performance not for atomicity.
+- Does not guarantee order or isolaton of commands.
+
+> `Atomicity` prevents partial updates or race conditions. Pipeline is not same as atomicity.
